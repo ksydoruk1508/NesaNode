@@ -59,12 +59,12 @@ function install_node {
 }
 
 function restart_node {
-    echo -e "${BLUE}Перезапускаем Docker контейнер...${NC}"
-    docker restart orchestrator
+    echo -e "${BLUE}Перезапускаем Docker контейнеры...${NC}"
+    docker restart orchestrator ipfs_node mongodb docker-watchtower-1
 }
 
 function view_logs {
-    echo -e "${YELLOW}Просмотр логов (выход из логов CTRL+C)...${NC}"
+    echo -e "${YELLOW}Просмотр логов orchestrator (выход из логов CTRL+C)...${NC}"
     docker logs -f orchestrator --tail=50
 }
 
@@ -77,7 +77,7 @@ function enable_auto_restart {
     echo -e "${BLUE}Устанавливаем crontab для автоматического перезапуска...${NC}"
     sudo apt install -y cron
     (crontab -l 2>/dev/null; echo "# Docker restart of orchestrator container to make NESA run properly") | crontab -
-    (crontab -l 2>/dev/null; echo "0 */2 * * * docker restart orchestrator") | crontab -
+    (crontab -l 2>/dev/null; echo "0 */2 * * * docker restart orchestrator ipfs_node mongodb docker-watchtower-1") | crontab -
     echo -e "${GREEN}Автоматический перезапуск каждые 2 часа успешно настроен.${NC}"
 }
 
@@ -88,8 +88,8 @@ function change_port {
 }
 
 function remove_node {
-    echo -e "${BLUE}Удаляем Docker контейнер и директорию...${NC}"
-    docker stop orchestrator && docker rm orchestrator --force 2>/dev/null || echo -e "${RED}Контейнер orchestrator не найден.${NC}"
+    echo -e "${BLUE}Удаляем Docker контейнеры и директорию...${NC}"
+    docker stop orchestrator ipfs_node mongodb docker-watchtower-1 && docker rm orchestrator ipfs_node mongodb docker-watchtower-1 --force 2>/dev/null || echo -e "${RED}Контейнеры не найдены.${NC}"
     if [ -d "$HOME/.nesa" ]; then
         rm -rf $HOME/.nesa
         echo -e "${GREEN}Нода успешно удалена.${NC}"
