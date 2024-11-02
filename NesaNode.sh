@@ -68,6 +68,19 @@ function view_logs {
     docker logs -f orchestrator --tail=50
 }
 
+function view_node_id {
+    echo -e "${BLUE}Ваш Node ID:${NC}"
+    cat $HOME/.nesa/identity/node_id.id
+}
+
+function enable_auto_restart {
+    echo -e "${BLUE}Устанавливаем crontab для автоматического перезапуска...${NC}"
+    sudo apt install -y cron
+    (crontab -l 2>/dev/null; echo "# Docker restart of orchestrator container to make NESA run properly") | crontab -
+    (crontab -l 2>/dev/null; echo "0 */2 * * * docker restart orchestrator") | crontab -
+    echo -e "${GREEN}Автоматический перезапуск каждые 2 часа успешно настроен.${NC}"
+}
+
 function change_port {
     echo -e "${YELLOW}Изменение порта...${NC}"
     echo -e "${YELLOW}Редактируйте файл конфигурации вручную: nano ~/.nesa/docker/compose.ipfs.yml${NC}"
@@ -91,9 +104,11 @@ function main_menu {
         echo -e "${CYAN}1. Установка ноды${NC}"
         echo -e "${CYAN}2. Рестарт ноды${NC}"
         echo -e "${CYAN}3. Просмотр логов${NC}"
-        echo -e "${CYAN}4. Изменить порт${NC}"
-        echo -e "${CYAN}5. Удаление ноды${NC}"
-        echo -e "${CYAN}6. Выход${NC}"
+        echo -e "${CYAN}4. Посмотреть Node ID${NC}"
+        echo -e "${CYAN}5. Включить автоматический перезапуск каждые 2 часа${NC}"
+        echo -e "${CYAN}6. Изменить порт${NC}"
+        echo -e "${CYAN}7. Удаление ноды${NC}"
+        echo -e "${CYAN}8. Выход${NC}"
        
         echo -e "${YELLOW}Введите номер:${NC} "
         read choice
@@ -101,9 +116,11 @@ function main_menu {
             1) install_node ;;
             2) restart_node ;;
             3) view_logs ;;
-            4) change_port ;;
-            5) remove_node ;;
-            6) break ;;
+            4) view_node_id ;;
+            5) enable_auto_restart ;;
+            6) change_port ;;
+            7) remove_node ;;
+            8) break ;;
             *) echo -e "${RED}Неверный выбор, попробуйте снова.${NC}" ;;
         esac
     done
