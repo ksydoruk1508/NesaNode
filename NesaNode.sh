@@ -36,94 +36,156 @@ echo -e "${NC}"
 
 function install_node {
     echo -e "${BLUE}Обновляем сервер...${NC}"
-    sudo apt-get update -y && sudo apt upgrade -y && sudo apt install -y jq
+    sudo apt-get update -y && sudo apt upgrade -y && sudo apt install -y python3-pip nano
 
-    echo -e "${BLUE}Устанавливаем Docker...${NC}"
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+    echo -e "${BLUE}Загружаем и выполняем скрипт установки ноды Gaianet...${NC}"
+    curl -sSfL 'https://github.com/GaiaNet-AI/gaianet-node/releases/latest/download/install.sh' | bash && echo 'export PATH=$PATH:/root/gaianet/bin' >> ~/.bashrc && source ~/.bashrc && export PATH=$PATH:/root/gaianet/bin
 
-    echo -e "${BLUE}Устанавливаем Docker Compose...${NC}"
-    VER=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
-    curl -L "https://github.com/docker/compose/releases/download/"$VER"/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-    docker-compose --version
+    echo -e "${BLUE}Настраиваем конфигурацию Bash...${NC}"
+    source ~/.bashrc
 
-    echo -e "${BLUE}Открываем порт...${NC}"
-    sudo ufw allow 31333
+    echo -e "${BLUE}Инициализируем GaiaNet с конфигурацией...${NC}"
+    gaianet init --config https://raw.githubusercontent.com/GaiaNet-AI/node-configs/main/qwen2-0.5b-instruct/config.json
 
-    echo -e "${BLUE}Запускаем установочный скрипт...${NC}"
-    bash <(curl -s https://raw.githubusercontent.com/nesaorg/bootstrap/master/bootstrap.sh)
+    echo -e "${BLUE}Запускаем ноду в фоновом режиме...${NC}"
+    nohup gaianet start > gaianet_node.log 2>&1 &
+    echo -e "${GREEN}Нода Gaianet успешно установлена и запущена в фоновом режиме.${NC}"
 
-    echo -e "${GREEN}Нода Nesa успешно установлена!${NC}"
-}
-
-function restart_node {
-    echo -e "${BLUE}Перезапускаем Docker контейнеры...${NC}"
-    docker restart orchestrator ipfs_node mongodb docker-watchtower-1
+    echo -e "${BLUE}Возвращаемся в главное меню...${NC}"
+    main_menu
 }
 
 function view_logs {
-    echo -e "${YELLOW}Просмотр логов orchestrator (выход из логов CTRL+C)...${NC}"
-    docker logs -f orchestrator --tail=50
-}
-
-function view_node_id {
-    echo -e "${BLUE}Ваш Node ID:${NC}"
-    cat $HOME/.nesa/identity/node_id.id
-}
-
-function enable_auto_restart {
-    echo -e "${BLUE}Устанавливаем crontab для автоматического перезапуска...${NC}"
-    sudo apt install -y cron
-    (crontab -l 2>/dev/null; echo "# Docker restart of orchestrator container to make NESA run properly") | crontab -
-    (crontab -l 2>/dev/null; echo "0 */2 * * * docker restart orchestrator ipfs_node mongodb docker-watchtower-1") | crontab -
-    echo -e "${GREEN}Автоматический перезапуск каждые 2 часа успешно настроен.${NC}"
-}
-
-function change_port {
-    echo -e "${YELLOW}Изменение порта...${NC}"
-    echo -e "${YELLOW}Редактируйте файл конфигурации вручную: nano ~/.nesa/docker/compose.ipfs.yml${NC}"
-    echo -e "${YELLOW}После изменения перезапустите ноду командой 'bash <(curl -s https://raw.githubusercontent.com/nesaorg/bootstrap/master/bootstrap.sh)'${NC}"
+    echo -e "${YELLOW}Просмотр логов ноды (последние 50 строк, выход из режима просмотра: Ctrl+C)...${NC}"
+    tail -n 50 gaianet_node.log
+    echo -e "${BLUE}Возвращаемся в главное меню...${NC}"
 }
 
 function remove_node {
-    echo -e "${BLUE}Удаляем Docker контейнеры и директорию...${NC}"
-    docker stop orchestrator ipfs_node mongodb docker-watchtower-1 && docker rm orchestrator ipfs_node mongodb docker-watchtower-1 --force 2>/dev/null || echo -e "${RED}Контейнеры не найдены.${NC}"
-    if [ -d "$HOME/.nesa" ]; then
-        rm -rf $HOME/.nesa
-        echo -e "${GREEN}Нода успешно удалена.${NC}"
-    else
-        echo -e "${RED}Директория ~/.nesa не найдена.${NC}"
-    fi
+    echo -e "${BLUE}Удаляем ноду Gaianet...${NC}"
+    pkill -f "gaianet start"
+    pkill -f "python3 ~/random_chat_with_faker.py"
+    sudo rm -rf /root/gaianet
+    sudo rm -f ~/random_chat_with_faker.py
+    sudo rm -f /etc/systemd/system/gaianet.service
+    sudo systemctl daemon-reload
+    echo -e "${GREEN}Нода Gaianet и связанные файлы успешно удалены.${NC}"
+}
+
+function restart_node {
+    echo -e "${BLUE}Перезапускаем ноду Gaianet...${NC}"
+    pkill -f "gaianet start"
+    echo -e "${BLUE}Запускаем ноду в фоновом режиме...${NC}"
+    nohup gaianet start > gaianet_node.log 2>&1 &
+    echo -e "${GREEN}Нода Gaianet успешно перезапущена.${NC}"
+}
+
+function view_node_info {
+    echo -e "${YELLOW}Просмотр Node id и Device id...${NC}"
+    gaianet info
+    echo -e "${BLUE}Возвращаемся в главное меню...${NC}"
+}
+
+function setup_ai_chat_automation {
+    echo -e "${BLUE}Устанавливаем необходимые библиотеки для автоматизации общения с AI ботом...${NC}"
+    pip install requests faker
+
+    echo -e "${BLUE}Создаем скрипт для автоматизации общения...${NC}"
+    cat << EOF > ~/random_chat_with_faker.py
+import requests
+import random
+import logging
+import time
+from faker import Faker
+from datetime import datetime
+
+subdomain = input("Введите ваш Subdomain для node_url (например, 0x3e74255d...): ")
+node_url = f"https://{subdomain}/v1/chat/completions"
+
+faker = Faker()
+
+headers = {
+    "accept": "application/json",
+    "Content-Type": "application/json"
+}
+
+logging.basicConfig(filename='chat_log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+def log_message(node, message):
+    logging.info(f"{node}: {message}")
+
+def send_message(node_url, message):
+    try:
+        response = requests.post(node_url, json=message, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to get response from API: {e}")
+        return None
+
+def extract_reply(response):
+    if response and 'choices' in response:
+        return response['choices'][0]['message']['content']
+    return ""
+
+while True:
+    random_question = faker.sentence(nb_words=10)
+    message = {
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": random_question}
+        ]
+    }
+    
+    question_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    response = send_message(node_url, message)
+    reply = extract_reply(response)
+    
+    reply_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    log_message("Node replied", f"Q ({question_time}): {random_question} A ({reply_time}): {reply}")
+    
+    print(f"Q ({question_time}): {random_question}\nA ({reply_time}): {reply}")
+    
+    delay = random.randint(60, 180)
+    time.sleep(delay)
+EOF
+
+    echo -e "${GREEN}Скрипт для автоматизации общения создан. Запускаем его в фоновом режиме...${NC}"
+    nohup python3 ~/random_chat_with_faker.py > chat_automation.log 2>&1 &
+    echo -e "${GREEN}Автоматизация общения с AI ботом запущена.${NC}"
+}
+
+function setup_auto_restart {
+    echo -e "${BLUE}Создаем сервис для автоматического перезапуска ноды...${NC}"
+    sudo tee /etc/systemd/system/gaianet.service > /dev/null <<EOF
+[Unit]
+Description=Gaianet Node Service
+After=network.target
+
+[Service]
+Type=forking
+RemainAfterExit=true
+ExecStart=/root/gaianet/bin/gaianet start
+ExecStop=/root/gaianet/bin/gaianet stop
+ExecStopPost=/bin/sleep 20
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable gaianet.service
+    sudo systemctl start gaianet.service
+    echo -e "${GREEN}Сервис для автоматического перезапуска ноды создан и запущен.${NC}"
 }
 
 function main_menu {
     while true; do
         echo -e "${YELLOW}Выберите действие:${NC}"
         echo -e "${CYAN}1. Установка ноды${NC}"
-        echo -e "${CYAN}2. Рестарт ноды${NC}"
-        echo -e "${CYAN}3. Просмотр логов${NC}"
-        echo -e "${CYAN}4. Посмотреть Node ID${NC}"
-        echo -e "${CYAN}5. Включить автоматический перезапуск каждые 2 часа${NC}"
-        echo -e "${CYAN}6. Изменить порт${NC}"
-        echo -e "${CYAN}7. Удаление ноды${NC}"
-        echo -e "${CYAN}8. Выход${NC}"
        
-        echo -e "${YELLOW}Введите номер:${NC} "
-        read choice
-        case $choice in
-            1) install_node ;;
-            2) restart_node ;;
-            3) view_logs ;;
-            4) view_node_id ;;
-            5) enable_auto_restart ;;
-            6) change_port ;;
-            7) remove_node ;;
-            8) break ;;
-            *) echo -e "${RED}Неверный выбор, попробуйте снова.${NC}" ;;
-        esac
-    done
-}
-
-main_menu
