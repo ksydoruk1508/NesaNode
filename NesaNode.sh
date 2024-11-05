@@ -1,41 +1,3 @@
-Skip to content
-Navigation Menu
-ksydoruk1508
-/
-NesaNode
-
-Type / to search
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security
-Insights
-Settings
-Files
-Go to file
-t
-NesaNode.sh
-BreadcrumbsNesaNode
-/NesaNode.sh
-Latest commit
-ksydoruk1508
-ksydoruk1508
-Update NesaNode.sh
-1b31ca6
- · 
-3 days ago
-History
-BreadcrumbsNesaNode
-/NesaNode.sh
-File metadata and controls
-
-Code
-
-Blame
-129 lines (108 loc) · 7.56 KB
 #!/bin/bash
 
 # Цвета текста
@@ -165,24 +127,3 @@ function main_menu {
 }
 
 main_menu
-Symbols
-Find definitions and references for functions and other symbols in this file by clicking a symbol below or in the code.
-Filter symbols
-r
-func
-install_node
-func
-restart_node
-func
-view_logs
-func
-view_node_id
-func
-enable_auto_restart
-func
-change_port
-func
-remove_node
-func
-main_menu
-NesaNode/NesaNode.sh at 1b31ca66e3359b1ba4c0509ee04f71bf665d2131 · ksydoruk1508/NesaNode
